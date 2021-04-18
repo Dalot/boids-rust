@@ -40,22 +40,35 @@ pub struct  Renderable {
     pub bg: RGB,
 }
 
+#[derive(Component)]
 pub struct  Boid {
     pub position: Position,
-    velocity: Velocity,
-    last_update: Duration,
-    pub color_index: usize,
-    color_factor: u8
+    pub velocity: Velocity,
 }
 
 impl Boid {
-    pub fn new() -> Self {
+    pub fn new(position: Position, velocity: Velocity) -> Self {
         Self {
-         position: Position::new(0.0,0.0),
-         velocity: Velocity::new(0.0,0.0),
-         last_update: SystemTime::now().elapsed().unwrap(),
-         color_index: 0,
-         color_factor: 3
+            position,
+            velocity,
         }
+    }
+
+    pub fn default() -> Self {
+        Self {
+            position: Position::new(0.0, 0.0),
+            velocity: Velocity::new(0.0, 0.0)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_boid_default() {
+        let boid = Boid::default();
+        assert_eq!(boid.position.x as i32, 0.0 as i32);
     }
 }
