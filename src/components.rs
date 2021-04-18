@@ -41,34 +41,15 @@ pub struct  Renderable {
 }
 
 #[derive(Component)]
-pub struct  Boid {
-    pub position: Position,
-    pub velocity: Velocity,
-}
+pub struct  Boid {}
 
 impl Boid {
-    pub fn new(position: Position, velocity: Velocity) -> Self {
-        Self {
-            position,
-            velocity,
-        }
-    }
-
-    pub fn default() -> Self {
-        Self {
-            position: Position::new(0.0, 0.0),
-            velocity: Velocity::new(0.0, 0.0)
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_boid_default() {
-        let boid = Boid::default();
-        assert_eq!(boid.position.x as i32, 0.0 as i32);
-    }
 }

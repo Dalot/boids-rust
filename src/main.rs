@@ -36,22 +36,53 @@ impl GameState for State {
 
         let positions = self.ecs.read_storage::<Position>();
         let renderables = self.ecs.read_storage::<Renderable>();
+        let boids = self.ecs.read_storage::<Boid>();
 
-        for (pos, render) in (&positions, &renderables).join() {
-            ctx.set(
-                pos.x as i32,
-                pos.y as i32,
-                render.fg,
-                render.bg,
-                render.glyph,
-            );
+        for (pos, render, boid) in (&positions, &renderables, &boids).join() {
+            draw_boid(ctx, pos, render);
+           
+            {
+                let mut delta = self.ecs.write_resource::<DeltaTime>();
+                *delta = DeltaTime(now.elapsed().as_micros() as f32 / 1000000.0 + delta.0);
+                dbg!(delta.0);
+            }
         }
+    }
+}
 
-        {
-            let mut delta = self.ecs.write_resource::<DeltaTime>();
-            *delta = DeltaTime(now.elapsed().as_micros() as f32 / 1000000.0 + delta.0);
-            dbg!(delta.0);
-        }
+pub fn draw_boid(ctx: &mut Rltk, pos: &Position, render: &Renderable) {
+    let base = 4;
+    let height = 3;
+    // Draw the drone
+
+    for i in 0..base {
+        ctx.set(
+            pos.x as i32 + i as i32,
+            pos.y as i32,
+            render.fg,
+            render.bg,
+            render.glyph,
+        );
+    }
+
+    for i in 0..height {
+        ctx.set(
+            pos.x as i32 + i as i32,
+            pos.y as i32 + i as i32,
+            render.fg,
+            render.bg,
+            rltk::to_cp437('/'),
+        );
+    }
+
+    for i in 0..height {
+        ctx.set(
+            pos.x as i32 + height as i32 - i as i32,
+            pos.y as i32 + i as i32,
+            render.fg,
+            render.bg,
+            rltk::to_cp437('\\'),
+        );
     }
 }
 
@@ -64,19 +95,19 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Velocity>();
+    gs.ecs.register::<Boid>();
     gs.ecs.insert(DeltaTime(0.0));
 
     gs.ecs
         .create_entity()
         .with(Renderable {
-            glyph: rltk::to_cp437('@'),
+            glyph: rltk::to_cp437('_'),
             fg: RGB::named(rltk::YELLOW),
             bg: RGB::named(rltk::BLACK),
         })
-        .with(Boid::new(
-            Position::new(38.0, 25.0),
-            Velocity::new(1.0, 1.0),
-        ))
+        .with(Position::new(38.0, 25.0))
+        .with(Velocity::new(0.1, 0.1))
+        .with(Boid::new())
         .build();
 
     rltk::main_loop(context, gs)
