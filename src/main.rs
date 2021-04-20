@@ -4,7 +4,7 @@ use rltk::{GameState, Rltk, RGB};
 use specs::prelude::*;
 use specs_derive::Component;
 use std::cmp::{max, min};
-use systems::Sys;
+use systems::{MovementSys, BoidSystem};
 mod components;
 use components::*;
 mod systems;
@@ -17,8 +17,12 @@ struct State {
     ecs: World,
 }
 impl State {
-    fn run_systems(&mut self) {
-        let mut sys = Sys {};
+    fn run_systems(&mut self, ctx: &mut Rltk) {
+        let mut sys = MovementSys {};
+        sys.run_now(&self.ecs);
+        let mut sys = BoidSystem {
+            ctx
+        };
         sys.run_now(&self.ecs);
         self.ecs.maintain();
     }
@@ -27,64 +31,19 @@ impl State {
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
         ctx.cls();
-        self.run_systems();
+        self.run_systems(ctx);
         let now = std::time::Instant::now();
         {
             let mut delta = self.ecs.write_resource::<DeltaTime>();
             *delta = DeltaTime(0.0);
         }
-
-        let positions = self.ecs.read_storage::<Position>();
-        let renderables = self.ecs.read_storage::<Renderable>();
-        let boids = self.ecs.read_storage::<Boid>();
-
-        for (pos, render, boid) in (&positions, &renderables, &boids).join() {
-            draw_boid(ctx, pos, render);
-           
-            {
-                let mut delta = self.ecs.write_resource::<DeltaTime>();
-                *delta = DeltaTime(now.elapsed().as_micros() as f32 / 1000000.0 + delta.0);
-                dbg!(delta.0);
-            }
+        {
+            let mut delta = self.ecs.write_resource::<DeltaTime>();
+            *delta = DeltaTime(now.elapsed().as_micros() as f32 / 1000000.0 + delta.0);
         }
     }
 }
 
-pub fn draw_boid(ctx: &mut Rltk, pos: &Position, render: &Renderable) {
-    let base = 4;
-    let height = 3;
-    // Draw the drone
-
-    for i in 0..base {
-        ctx.set(
-            pos.x as i32 + i as i32,
-            pos.y as i32,
-            render.fg,
-            render.bg,
-            render.glyph,
-        );
-    }
-
-    for i in 0..height {
-        ctx.set(
-            pos.x as i32 + i as i32,
-            pos.y as i32 + i as i32,
-            render.fg,
-            render.bg,
-            rltk::to_cp437('/'),
-        );
-    }
-
-    for i in 0..height {
-        ctx.set(
-            pos.x as i32 + height as i32 - i as i32,
-            pos.y as i32 + i as i32,
-            render.fg,
-            render.bg,
-            rltk::to_cp437('\\'),
-        );
-    }
-}
 
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
@@ -106,7 +65,7 @@ fn main() -> rltk::BError {
             bg: RGB::named(rltk::BLACK),
         })
         .with(Position::new(38.0, 25.0))
-        .with(Velocity::new(0.1, 0.1))
+        .with(Velocity::new(10.0, 10.0))
         .with(Boid::new())
         .build();
 
