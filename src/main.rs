@@ -1,9 +1,7 @@
 extern crate rltk;
-
+use rand::Rng;
 use rltk::{GameState, Rltk, RGB};
 use specs::prelude::*;
-use specs_derive::Component;
-use std::cmp::{max, min};
 use systems::{MovementSys, BoidSystem};
 mod components;
 use components::*;
@@ -57,17 +55,20 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Boid>();
     gs.ecs.insert(DeltaTime(0.0));
 
-    gs.ecs
-        .create_entity()
-        .with(Renderable {
-            glyph: rltk::to_cp437('_'),
-            fg: RGB::named(rltk::YELLOW),
-            bg: RGB::named(rltk::BLACK),
-        })
-        .with(Position::new(38.0, 25.0))
-        .with(Velocity::new(10.0, 10.0))
-        .with(Boid::new())
-        .build();
+    let mut rng = rand::thread_rng();
+    for _ in 0..30 {
+        gs.ecs
+            .create_entity()
+            .with(Renderable {
+                glyph: rltk::to_cp437('_'),
+                fg: RGB::named(rltk::YELLOW),
+                bg: RGB::named(rltk::BLACK),
+            })
+            .with(Position::new(rng.gen_range(5.0..76.0) , rng.gen_range(5.0..45.0)))
+            .with(Velocity::new(rng.gen_range(-70.0..70.0), rng.gen_range(-70.0..70.0)))
+            .with(Boid::new())
+            .build();
+    }
 
     rltk::main_loop(context, gs)
 }

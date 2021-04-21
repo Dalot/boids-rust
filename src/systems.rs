@@ -1,7 +1,8 @@
-use specs::prelude::*;
-use rltk::{Rltk};
 use crate::components::{Position, Velocity};
-use crate::{DeltaTime, VEL_STEP, Boid, Renderable};
+use crate::{Boid, DeltaTime, Renderable, VEL_STEP};
+use rltk::Rltk;
+use specs::prelude::*;
+use std::fmt;
 
 pub struct MovementSys;
 impl<'a> System<'a> for MovementSys {
@@ -25,19 +26,32 @@ fn update_position(pos: &mut Position, vel: &Velocity, delta: f32) {
 }
 
 pub struct BoidSystem<'a> {
-   pub ctx: &'a mut Rltk
+    pub ctx: &'a mut Rltk,
 }
 impl<'a> System<'a> for BoidSystem<'_> {
     type SystemData = (
         ReadStorage<'a, Position>,
         ReadStorage<'a, Renderable>,
-        ReadStorage<'a, Boid>
+        ReadStorage<'a, Boid>,
+        WriteStorage<'a, Velocity>,
     );
 
-    fn run (&mut self, (pos, render, boid): Self::SystemData) {
-
-        for (pos, render, boid) in (&pos, &render, &boid).join() {
+    fn run(&mut self, (pos, render, boid, mut vel): Self::SystemData) {
+        for (pos, render, boid, vel) in (&pos, &render, &boid, &mut vel).join() {
             self.draw_boid(pos, render);
+            let boid_body = boid.body(pos.x, pos.y);
+            for (x, y) in boid_body.iter() {
+                if *x >= 79.0 || *x <= 1.0 {
+                    vel.x = -vel.x;
+                    vel.y = -vel.y;
+                    break;
+                }
+                if *y >= 49.0 || *y <= 1.0 {
+                    vel.y = -vel.y;
+                    vel.x = -vel.x;
+                    break; 
+                }
+            }
         }
     }
 }
@@ -48,6 +62,7 @@ impl<'a> BoidSystem<'a> {
         let height = 3;
         // Draw the drone
 
+        // the hat first
         for i in 0..base {
             self.ctx.set(
                 pos.x as i32 + i as i32,
@@ -58,6 +73,7 @@ impl<'a> BoidSystem<'a> {
             );
         }
 
+        // One helice and 2 side of the square
         for i in 0..height {
             self.ctx.set(
                 pos.x as i32 + i as i32,
@@ -68,6 +84,7 @@ impl<'a> BoidSystem<'a> {
             );
         }
 
+        // The other helice and other 2 sides of the square
         for i in 0..height {
             self.ctx.set(
                 pos.x as i32 + height as i32 - i as i32,
@@ -89,7 +106,7 @@ mod tests {
         let mut pos = Position::new(1.0, 1.0);
         let vel = Velocity::new(1.0, 1.0);
         let delta = 0.001;
-        update_position(&mut pos, &vel, delta); 
+        update_position(&mut pos, &vel, delta);
         assert_eq!(pos.x as i32, 2.0 as i32);
         assert_eq!(pos.y as i32, 2.0 as i32);
     }

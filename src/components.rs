@@ -41,12 +41,25 @@ pub struct  Renderable {
 }
 
 #[derive(Component)]
-pub struct  Boid {}
+pub struct  Boid {
+}
 
 impl Boid {
     pub fn new() -> Self {
         Self {}
     }
+    
+    pub fn body(&self, x: f32, y: f32) -> Vec<(f32, f32)> {
+        let mut points = Vec::<(f32,f32)>::new();
+        for i in 0..4 {
+            points.push((x + i as f32, y + 1 as f32));
+            points.push((x + i as f32, y + 2 as f32));
+            points.push((x + i as f32, y + 3 as f32));
+        }
+
+        points
+    }    
+    
 }
 #[cfg(test)]
 mod tests {
