@@ -2,15 +2,23 @@ extern crate rltk;
 use rand::Rng;
 use rltk::{GameState, Rltk, RGB};
 use specs::prelude::*;
-use systems::{MovementSys, BoidSystem};
+use systems::{BoidSystem, MovementSys};
 mod components;
 use components::*;
 mod systems;
 
-const VEL_STEP: f32 = 1000.0;
+const WIDTH: f64 = 80.0;
+const HEIGHT: f64 = 50.0;
+const SCALE: f64 = 50000.0;
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(f32);
+
+#[derive(Default, Debug)]
+pub struct Flock {
+    pub positions: Vec<Position>,
+}
+
 struct State {
     ecs: World,
 }
@@ -18,9 +26,7 @@ impl State {
     fn run_systems(&mut self, ctx: &mut Rltk) {
         let mut sys = MovementSys {};
         sys.run_now(&self.ecs);
-        let mut sys = BoidSystem {
-            ctx
-        };
+        let mut sys = BoidSystem { ctx };
         sys.run_now(&self.ecs);
         self.ecs.maintain();
     }
@@ -42,10 +48,9 @@ impl GameState for State {
     }
 }
 
-
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
-    let context = RltkBuilder::simple80x50()
+    let context = RltkBuilder::simple(WIDTH as u32, HEIGHT as u32)?
         .with_title("Roguelike Tutorial")
         .build()?;
     let mut gs = State { ecs: World::new() };
@@ -54,9 +59,21 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Velocity>();
     gs.ecs.register::<Boid>();
     gs.ecs.insert(DeltaTime(0.0));
+    gs.ecs.insert(Flock {
+        positions: Vec::new(),
+    });
 
     let mut rng = rand::thread_rng();
-    for _ in 0..30 {
+    for _ in 0..3 {
+        let pos = Position::new(
+            rng.gen_range(5.0..WIDTH - 5.0),
+            rng.gen_range(5.0..HEIGHT - 5.0),
+        );
+        {
+            let mut flock = gs.ecs.write_resource::<Flock>();
+            flock.positions.push(pos);
+        }
+
         gs.ecs
             .create_entity()
             .with(Renderable {
@@ -64,8 +81,11 @@ fn main() -> rltk::BError {
                 fg: RGB::named(rltk::YELLOW),
                 bg: RGB::named(rltk::BLACK),
             })
-            .with(Position::new(rng.gen_range(5.0..76.0) , rng.gen_range(5.0..45.0)))
-            .with(Velocity::new(rng.gen_range(-70.0..70.0), rng.gen_range(-70.0..70.0)))
+            .with(pos)
+            .with(Velocity::new(
+                rng.gen_range(-1.0..1.0),
+                rng.gen_range(-1.0..1.0),
+            ))
             .with(Boid::new())
             .build();
     }
