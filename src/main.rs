@@ -10,6 +10,8 @@ mod systems;
 const WIDTH: f64 = 80.0;
 const HEIGHT: f64 = 50.0;
 const SCALE: f64 = 50000.0;
+const SEPARATION_FACTOR: f64 = 10.0;
+const MAX_PROXIMAL_BOIDS: u32 = 3;
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(f32);
@@ -64,11 +66,8 @@ fn main() -> rltk::BError {
     });
 
     let mut rng = rand::thread_rng();
-    for _ in 0..3 {
-        let pos = Position::new(
-            rng.gen_range(5.0..WIDTH - 5.0),
-            rng.gen_range(5.0..HEIGHT - 5.0),
-        );
+    for _ in 0..100 {
+        let pos = Position::new(rng.gen_range(0.0..WIDTH), rng.gen_range(0.0..HEIGHT));
         {
             let mut flock = gs.ecs.write_resource::<Flock>();
             flock.positions.push(pos);
@@ -82,10 +81,7 @@ fn main() -> rltk::BError {
                 bg: RGB::named(rltk::BLACK),
             })
             .with(pos)
-            .with(Velocity::new(
-                rng.gen_range(-1.0..1.0),
-                rng.gen_range(-1.0..1.0),
-            ))
+            .with(Velocity::new(0.0, 0.0))
             .with(Boid::new())
             .build();
     }

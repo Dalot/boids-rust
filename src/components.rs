@@ -29,12 +29,17 @@ impl Position {
         Self { x, y }
     }
 
-    pub fn distance(&self, posA: &Position, posB: &Position) -> std::cmp::Ordering {
+    pub fn distance(&self, pos_a: &Position, pos_b: &Position) -> std::cmp::Ordering {
 
-        let resA = ((posA.x - self.x).powi(2) + (posA.y - self.y).powi(2)).sqrt();
-        let resB = ((posB.x - self.x).powi(2) + (posB.y - self.y).powi(2)).sqrt();
+        let res_a = ((pos_a.x - self.x).powi(2) + (pos_a.y - self.y).powi(2)).sqrt();
+        let res_b = ((pos_b.x - self.x).powi(2) + (pos_b.y - self.y).powi(2)).sqrt();
 
-        resA.partial_cmp(&resB).unwrap()
+        res_a.partial_cmp(&res_b).unwrap()
+    }
+
+    // since rust does not support overloading methos, there is an opportunity here for possible refactor 
+    pub fn distance_to(&self, pos_a: &Position) -> f64 {
+        ((pos_a.x - self.x).powi(2) + (pos_a.y - self.y).powi(2)).sqrt()
     }
 }
 
