@@ -3,7 +3,9 @@ use rltk::RGB;
 use specs::prelude::*;
 use specs_derive::Component;
 use std::time::{Duration, SystemTime};
-#[derive(Component)]
+use std::hash::{Hash, Hasher};
+
+#[derive(Component, Copy, Clone, Debug)]
 pub struct Velocity {
     pub x: f64,
     pub y: f64,
@@ -48,7 +50,14 @@ impl PartialEq for Position {
         self.x == other.x && self.y == other.y
     }
 }
+impl Eq for Position {}
 
+impl Hash for Position {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.x.to_string().hash(state);
+        self.y.to_string().hash(state);
+    }
+}
 
 #[derive(Component)]
 pub struct Renderable {

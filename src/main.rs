@@ -7,19 +7,15 @@ mod components;
 use components::*;
 mod systems;
 
-const WIDTH: f64 = 80.0;
-const HEIGHT: f64 = 50.0;
-const SCALE: f64 = 50000.0;
-const SEPARATION_FACTOR: f64 = 10.0;
-const MAX_PROXIMAL_BOIDS: u32 = 3;
+const WIDTH: f64 = 150.0;
+const HEIGHT: f64 = 100.0;
+const SCALE: f64 = 1.0;
+const SEPARATION_FACTOR: f64 = 3.0;
+const COHERENCE_FACTOR: f64 = 7.0;
+const MAX_PROXIMAL_BOIDS: u32 = 9;
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(f32);
-
-#[derive(Default, Debug)]
-pub struct Flock {
-    pub positions: Vec<Position>,
-}
 
 struct State {
     ecs: World,
@@ -53,7 +49,7 @@ impl GameState for State {
 fn main() -> rltk::BError {
     use rltk::RltkBuilder;
     let context = RltkBuilder::simple(WIDTH as u32, HEIGHT as u32)?
-        .with_title("Roguelike Tutorial")
+        .with_title("Boids Simulation")
         .build()?;
     let mut gs = State { ecs: World::new() };
     gs.ecs.register::<Position>();
@@ -61,17 +57,10 @@ fn main() -> rltk::BError {
     gs.ecs.register::<Velocity>();
     gs.ecs.register::<Boid>();
     gs.ecs.insert(DeltaTime(0.0));
-    gs.ecs.insert(Flock {
-        positions: Vec::new(),
-    });
 
     let mut rng = rand::thread_rng();
-    for _ in 0..100 {
+    for _ in 0..150 {
         let pos = Position::new(rng.gen_range(0.0..WIDTH), rng.gen_range(0.0..HEIGHT));
-        {
-            let mut flock = gs.ecs.write_resource::<Flock>();
-            flock.positions.push(pos);
-        }
 
         gs.ecs
             .create_entity()
@@ -81,7 +70,7 @@ fn main() -> rltk::BError {
                 bg: RGB::named(rltk::BLACK),
             })
             .with(pos)
-            .with(Velocity::new(0.0, 0.0))
+            .with(Velocity::new(2.0, 2.0))
             .with(Boid::new())
             .build();
     }

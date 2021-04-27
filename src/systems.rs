@@ -1,6 +1,6 @@
 use crate::components::{Position, Velocity};
 use crate::{
-    Boid, DeltaTime, Flock, Renderable, HEIGHT, MAX_PROXIMAL_BOIDS, SCALE, SEPARATION_FACTOR, WIDTH,
+    Boid, DeltaTime, Renderable, HEIGHT, MAX_PROXIMAL_BOIDS, COHERENCE_FACTOR, SCALE, SEPARATION_FACTOR, WIDTH,
 };
 use rltk::Rltk;
 use specs::prelude::*;
@@ -38,31 +38,38 @@ impl<'a> System<'a> for BoidSystem<'_> {
         ReadStorage<'a, Renderable>,
         ReadStorage<'a, Boid>,
         WriteStorage<'a, Velocity>,
-        Write<'a, Flock>,
     );
 
-    fn run(&mut self, (entities, mut positions, renders, boids, mut velocities, mut flock): Self::SystemData) {
+    fn run(&mut self, (entities, mut positions, renders, boids, mut velocities): Self::SystemData) {
+        let mut all_positions = Vec::<Position>::new();
+        let mut pos_vel_map = std::collections::HashMap::<Position, Velocity>::new();
 
-        for (pos, render, boid, vel) in (&mut positions, &renders, &boids, &mut velocities).join() {
-            self.draw_boid(boid, pos, render);
-            
-            if pos.x >= WIDTH || pos.x < 1.0 {
-                vel.x = -vel.x;
-                vel.y = -vel.y;
-                break;
-            }
-            if pos.y >= HEIGHT || pos.y < 1.0 {
-                vel.y = -vel.y;
-                vel.x = -vel.x;
-                break;
-            }
-            
-            self.neighbours(pos, &mut flock.positions);
-            self.separate(pos, &flock.positions);
-            //self.align(pos, vel, &flock.positions);
-            //self.cohere(pos, vel, &flock.positions);
+        for (pos, vel) in (&positions, &velocities).join() {
+            all_positions.push(*pos);
+            pos_vel_map.insert(*pos, *vel);
         }
-        
+
+        let mut count = 0;
+        for (pos, render, boid, vel) in (&mut positions, &renders, &boids, &mut velocities).join() {
+            count += 1;
+            self.draw_boid(boid, pos, render);
+            if pos.x > WIDTH {
+                pos.x = WIDTH - pos.x;
+            } else if pos.x < 0.0 {
+                pos.x = WIDTH + pos.x ;
+            }
+
+            if pos.y > HEIGHT {
+                pos.y = HEIGHT - pos.y;
+            } else if pos.y < 0.0 {
+                pos.y = HEIGHT + pos.y;
+            }
+
+            self.neighbours(pos, &mut all_positions);
+            self.separate(pos, vel, &all_positions);
+            self.align(pos, vel, &all_positions, &pos_vel_map);
+            self.cohere(pos, vel, &all_positions);
+        }
     }
 }
 
@@ -81,56 +88,63 @@ impl<'a> BoidSystem<'a> {
         positions.sort_unstable_by(|a, b| pos.distance(a, b));
     }
 
-    pub fn separate(&self, pos: &mut Position, positions: &[Position]) {
+    pub fn separate(&self, pos: &mut Position, vel: &mut Velocity, positions: &[Position]) {
         let (mut x, mut y) = (0.0, 0.0);
 
         for i in 0..MAX_PROXIMAL_BOIDS {
             let other_pos = &positions[i as usize];
             if pos.distance_to(other_pos) < SEPARATION_FACTOR {
-                
                 x += pos.x - other_pos.x;
                 y += pos.y - other_pos.y;
             }
         }
-        //vel.x = x * SCALE;
-        //vel.y = y * SCALE;
-        //pos.x += x;
-        //pos.y += y;
+        vel.x = x * SCALE;
+        vel.y = y * SCALE;
+        pos.x += x;
+        pos.y += y;
     }
 
-    pub fn align(&self, pos: &mut Position, vel: &mut Velocity, positions: &[Position]) {
+    pub fn align(
+        &self,
+        pos: &mut Position,
+        vel: &mut Velocity,
+        positions: &[Position],
+        map: &std::collections::HashMap<Position, Velocity>,
+    ) {
         let (mut x, mut y) = (0.0 as f64, 0.0 as f64);
 
         for i in 0..MAX_PROXIMAL_BOIDS {
             let other_pos = &positions[i as usize];
-
-            x += vel.x; // I need here the other velocity
-            y += vel.y; // I need here the other velocity
+            match map.get(other_pos) {
+                None => continue, 
+                Some(vel) => {
+                    x += vel.x; // I need here the other velocity
+                    y += vel.y; // I need here the other velocity
+                }
+            }
         }
 
         let (dx, dy) = (x / MAX_PROXIMAL_BOIDS as f64, y / MAX_PROXIMAL_BOIDS as f64);
         vel.x += dx * SCALE;
-	    vel.y += dy * SCALE;
-    	pos.x += dx;
-    	pos.y += dy;
+        vel.y += dy * SCALE;
+        pos.x += dx;
+        pos.y += dy;
     }
-
 
     pub fn cohere(&self, pos: &mut Position, vel: &mut Velocity, positions: &[Position]) {
         let (mut x, mut y) = (0.0 as f64, 0.0 as f64);
 
         for i in 0..MAX_PROXIMAL_BOIDS {
             let other_pos = &positions[i as usize];
-
             x += other_pos.x;
             y += other_pos.y;
         }
 
-        let (dx, dy) = (x / MAX_PROXIMAL_BOIDS as f64, y / MAX_PROXIMAL_BOIDS as f64);
+        let (dx, dy) = (((x / MAX_PROXIMAL_BOIDS as f64) - pos.x) / COHERENCE_FACTOR, ((y / MAX_PROXIMAL_BOIDS as f64) - pos.y) / COHERENCE_FACTOR);
         vel.x += dx * SCALE;
-	    vel.y += dy * SCALE;
-    	pos.x += dx;
-    	pos.y += dy;
+        vel.y += dy * SCALE;
+        pos.x += dx;
+        pos.y += dy;
     }
 }
 
