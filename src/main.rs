@@ -9,10 +9,11 @@ mod systems;
 
 const WIDTH: f64 = 150.0;
 const HEIGHT: f64 = 100.0;
-const SCALE: f64 = 1.0;
+const SCALE: f64 = 1.3;
 const SEPARATION_FACTOR: f64 = 3.0;
-const COHERENCE_FACTOR: f64 = 7.0;
-const MAX_PROXIMAL_BOIDS: u32 = 9;
+const COHERENCE_FACTOR: f64 = 9.0;
+const MAX_PROXIMAL_BOIDS: u32 = 10;
+const MAX_SPEED: f64 = 3.0;
 
 #[derive(Default, Debug)]
 pub struct DeltaTime(f32);
@@ -70,7 +71,7 @@ fn main() -> rltk::BError {
                 bg: RGB::named(rltk::BLACK),
             })
             .with(pos)
-            .with(Velocity::new(2.0, 2.0))
+            .with(Velocity::new(rng.gen_range(-3.0..3.0), rng.gen_range(-3.0..3.0)))
             .with(Boid::new())
             .build();
     }

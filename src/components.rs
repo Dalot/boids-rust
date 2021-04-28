@@ -2,10 +2,9 @@ use crate::SCALE;
 use rltk::RGB;
 use specs::prelude::*;
 use specs_derive::Component;
-use std::time::{Duration, SystemTime};
 use std::hash::{Hash, Hasher};
 
-#[derive(Component, Copy, Clone, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct Velocity {
     pub x: f64,
     pub y: f64,
@@ -20,7 +19,7 @@ impl Velocity {
     }
 }
 
-#[derive(Component, Copy, Clone, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -74,6 +73,7 @@ impl Boid {
         Self {}
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

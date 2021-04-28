@@ -1,10 +1,10 @@
 use crate::components::{Position, Velocity};
 use crate::{
-    Boid, DeltaTime, Renderable, HEIGHT, MAX_PROXIMAL_BOIDS, COHERENCE_FACTOR, SCALE, SEPARATION_FACTOR, WIDTH,
+    Boid, DeltaTime, Renderable, COHERENCE_FACTOR, HEIGHT, MAX_PROXIMAL_BOIDS, MAX_SPEED, SCALE,
+    SEPARATION_FACTOR, WIDTH,
 };
 use rltk::Rltk;
 use specs::prelude::*;
-use std::f64::consts::PI;
 
 pub struct MovementSys;
 impl<'a> System<'a> for MovementSys {
@@ -33,48 +33,48 @@ pub struct BoidSystem<'a> {
 impl<'a> System<'a> for BoidSystem<'_> {
     #[allow(clippy::type_complexity)]
     type SystemData = (
-        Entities<'a>,
         WriteStorage<'a, Position>,
         ReadStorage<'a, Renderable>,
         ReadStorage<'a, Boid>,
         WriteStorage<'a, Velocity>,
     );
 
-    fn run(&mut self, (entities, mut positions, renders, boids, mut velocities): Self::SystemData) {
+    fn run(&mut self, (mut positions, renders, boids, mut velocities): Self::SystemData) {
         let mut all_positions = Vec::<Position>::new();
         let mut pos_vel_map = std::collections::HashMap::<Position, Velocity>::new();
 
         for (pos, vel) in (&positions, &velocities).join() {
-            all_positions.push(*pos);
-            pos_vel_map.insert(*pos, *vel);
+            all_positions.push(pos.clone());
+            pos_vel_map.insert(pos.clone(), vel.clone());
         }
 
-        let mut count = 0;
-        for (pos, render, boid, vel) in (&mut positions, &renders, &boids, &mut velocities).join() {
-            count += 1;
-            self.draw_boid(boid, pos, render);
+        for (pos, render, _, vel) in (&mut positions, &renders, &boids, &mut velocities).join()
+        {
+            self.draw_boid(pos, render);
             if pos.x > WIDTH {
-                pos.x = WIDTH - pos.x;
-            } else if pos.x < 0.0 {
-                pos.x = WIDTH + pos.x ;
+                pos.x = 0.0;
             }
-
+            if pos.x < 0.0 {
+                pos.x = WIDTH;
+            }
             if pos.y > HEIGHT {
-                pos.y = HEIGHT - pos.y;
-            } else if pos.y < 0.0 {
-                pos.y = HEIGHT + pos.y;
+                pos.y = 0.0;
+            }
+            if pos.y < 0.0 {
+                pos.y = HEIGHT;
             }
 
             self.neighbours(pos, &mut all_positions);
             self.separate(pos, vel, &all_positions);
             self.align(pos, vel, &all_positions, &pos_vel_map);
             self.cohere(pos, vel, &all_positions);
+            self.limit_speed(vel);
         }
     }
 }
 
 impl<'a> BoidSystem<'a> {
-    pub fn draw_boid(&mut self, boid: &Boid, pos: &Position, render: &Renderable) {
+    pub fn draw_boid(&mut self, pos: &Position, render: &Renderable) {
         self.ctx.set(
             pos.x as i32,
             pos.y as i32,
@@ -82,6 +82,21 @@ impl<'a> BoidSystem<'a> {
             render.bg,
             rltk::to_cp437('▲'),
         );
+    }
+
+    pub fn limit_speed(&self, vel: &mut Velocity) {
+        if vel.x > MAX_SPEED {
+            vel.x = MAX_SPEED;
+        }
+        if vel.x < -MAX_SPEED {
+            vel.x = -MAX_SPEED;
+        }
+        if vel.y > MAX_SPEED {
+            vel.y = MAX_SPEED;
+        }
+        if vel.y < -MAX_SPEED {
+            vel.y = -MAX_SPEED;
+        }
     }
 
     pub fn neighbours(&self, pos: &Position, positions: &mut Vec<Position>) {
@@ -116,7 +131,7 @@ impl<'a> BoidSystem<'a> {
         for i in 0..MAX_PROXIMAL_BOIDS {
             let other_pos = &positions[i as usize];
             match map.get(other_pos) {
-                None => continue, 
+                None => continue,
                 Some(vel) => {
                     x += vel.x; // I need here the other velocity
                     y += vel.y; // I need here the other velocity
@@ -140,7 +155,10 @@ impl<'a> BoidSystem<'a> {
             y += other_pos.y;
         }
 
-        let (dx, dy) = (((x / MAX_PROXIMAL_BOIDS as f64) - pos.x) / COHERENCE_FACTOR, ((y / MAX_PROXIMAL_BOIDS as f64) - pos.y) / COHERENCE_FACTOR);
+        let (dx, dy) = (
+            ((x / MAX_PROXIMAL_BOIDS as f64) - pos.x) / COHERENCE_FACTOR,
+            ((y / MAX_PROXIMAL_BOIDS as f64) - pos.y) / COHERENCE_FACTOR,
+        );
         vel.x += dx * SCALE;
         vel.y += dy * SCALE;
         pos.x += dx;
@@ -151,16 +169,6 @@ impl<'a> BoidSystem<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_position_update() {
-        let mut pos = Position::new(1.0, 1.0);
-        let vel = Velocity::new(1.0, 1.0);
-        let delta = 0.001;
-        update_position(&mut pos, &vel, delta);
-        assert_eq!(pos.x as i32, 2.0 as i32);
-        assert_eq!(pos.y as i32, 2.0 as i32);
-    }
 
     #[test]
     fn text_sort_stable() {
