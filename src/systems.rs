@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::components::{Position, Velocity};
 use crate::{
     Boid, DeltaTime, Renderable, COHERENCE_FACTOR, HEIGHT, MAX_PROXIMAL_BOIDS, MAX_SPEED, SCALE,
@@ -23,8 +25,8 @@ impl<'a> System<'a> for MovementSys {
 }
 
 fn update_position(pos: &mut Position, vel: &Velocity, delta: f32) {
-    pos.x += vel.x as f64 * delta as f64;
-    pos.y += vel.y as f64 * delta as f64;
+    pos.x += vel.x * delta as f64;
+    pos.y += vel.y * delta as f64;
 }
 
 pub struct BoidSystem<'a> {
@@ -40,8 +42,12 @@ impl<'a> System<'a> for BoidSystem<'_> {
     );
 
     fn run(&mut self, (mut positions, renders, boids, mut velocities): Self::SystemData) {
-        let mut all_positions = Vec::<Position>::new();
-        let mut pos_vel_map = std::collections::HashMap::<Position, Velocity>::new();
+        // NOTE: You can pre-allocate the size of the vector and map since you know how many
+        // elements they will contain!
+        // NOTE: I also usually don't include the ::<Position> and let type inference figure it
+        // out. But it doesn't hurt to be more explicit.
+        let mut all_positions = Vec::<Position>::with_capacity(positions.count());
+        let mut pos_vel_map = HashMap::<Position, Velocity>::with_capacity(positions.count());
 
         for (pos, vel) in (&positions, &velocities).join() {
             all_positions.push(pos.clone());
@@ -50,7 +56,9 @@ impl<'a> System<'a> for BoidSystem<'_> {
 
         for (pos, render, _, vel) in (&mut positions, &renders, &boids, &mut velocities).join()
         {
+            // NOTE: I usually do the updating before drawing. But it can be done either way!
             self.draw_boid(pos, render);
+            // NOTE: I love the wrap around :)
             if pos.x > WIDTH {
                 pos.x = 0.0;
             }
@@ -85,18 +93,9 @@ impl<'a> BoidSystem<'a> {
     }
 
     pub fn limit_speed(&self, vel: &mut Velocity) {
-        if vel.x > MAX_SPEED {
-            vel.x = MAX_SPEED;
-        }
-        if vel.x < -MAX_SPEED {
-            vel.x = -MAX_SPEED;
-        }
-        if vel.y > MAX_SPEED {
-            vel.y = MAX_SPEED;
-        }
-        if vel.y < -MAX_SPEED {
-            vel.y = -MAX_SPEED;
-        }
+        // NOTE: clamp is relatively new in the standard library, but it's a welcome addition :)
+        vel.x = vel.x.clamp(-MAX_SPEED, MAX_SPEED);
+        vel.y = vel.y.clamp(-MAX_SPEED, MAX_SPEED);
     }
 
     pub fn neighbours(&self, pos: &Position, positions: &mut Vec<Position>) {
@@ -124,12 +123,12 @@ impl<'a> BoidSystem<'a> {
         pos: &mut Position,
         vel: &mut Velocity,
         positions: &[Position],
-        map: &std::collections::HashMap<Position, Velocity>,
+        map: &HashMap<Position, Velocity>,
     ) {
         let (mut x, mut y) = (0.0 as f64, 0.0 as f64);
 
-        for i in 0..MAX_PROXIMAL_BOIDS {
-            let other_pos = &positions[i as usize];
+        // NOTE: You can take a subslice here and iterate over it directly!
+        for other_pos in &positions[0..MAX_PROXIMAL_BOIDS as usize] {
             match map.get(other_pos) {
                 None => continue,
                 Some(vel) => {
@@ -169,6 +168,8 @@ impl<'a> BoidSystem<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // NOTE: Some tests, hell yeah!
 
     #[test]
     fn text_sort_stable() {
