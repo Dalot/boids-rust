@@ -4,9 +4,8 @@ use rltk::RGB;
 use specs::prelude::*;
 use specs_derive::Component;
 
-use crate::SCALE;
+use crate::constants::SCALE;
 
-// NOTE: For small components like these, I usually just make them Copy.
 #[derive(Component, Clone, Copy, Debug)]
 pub struct Velocity {
     pub x: f64,
@@ -49,8 +48,6 @@ impl Position {
     }
 }
 
-// NOTE: You can let the Rust compiler generate these implementations for you! Just add PartialEq,
-// Eq, and Hash to the Position struct derive attribute.
 impl PartialEq for Position {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
@@ -72,18 +69,6 @@ pub struct Renderable {
     pub bg: RGB,
 }
 
-// NOTE: For empty components that are used as markers like this, you can declare them as
-// struct Boid; And use it as just Boid (or Self), with no braces. The type is the value!
 #[derive(Component, Copy, Clone, Debug)]
-pub struct Boid {}
+pub struct Boid {} 
 
-impl Boid {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-}

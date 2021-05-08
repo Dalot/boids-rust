@@ -1,10 +1,8 @@
 use std::collections::HashMap;
 
 use crate::components::{Position, Velocity};
-use crate::{
-    Boid, DeltaTime, Renderable, COHERENCE_FACTOR, HEIGHT, MAX_PROXIMAL_BOIDS, MAX_SPEED, SCALE,
-    SEPARATION_FACTOR, WIDTH,
-};
+use crate::constants::*;
+use crate::{Boid, DeltaTime, Renderable};
 use rltk::Rltk;
 use specs::prelude::*;
 
@@ -42,10 +40,6 @@ impl<'a> System<'a> for BoidSystem<'_> {
     );
 
     fn run(&mut self, (mut positions, renders, boids, mut velocities): Self::SystemData) {
-        // NOTE: You can pre-allocate the size of the vector and map since you know how many
-        // elements they will contain!
-        // NOTE: I also usually don't include the ::<Position> and let type inference figure it
-        // out. But it doesn't hurt to be more explicit.
         let mut all_positions = Vec::<Position>::with_capacity(positions.count());
         let mut pos_vel_map = HashMap::<Position, Velocity>::with_capacity(positions.count());
 
@@ -54,8 +48,7 @@ impl<'a> System<'a> for BoidSystem<'_> {
             pos_vel_map.insert(pos.clone(), vel.clone());
         }
 
-        for (pos, render, _, vel) in (&mut positions, &renders, &boids, &mut velocities).join()
-        {
+        for (pos, render, _, vel) in (&mut positions, &renders, &boids, &mut velocities).join() {
             // NOTE: I usually do the updating before drawing. But it can be done either way!
             self.draw_boid(pos, render);
             // NOTE: I love the wrap around :)
@@ -168,8 +161,6 @@ impl<'a> BoidSystem<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // NOTE: Some tests, hell yeah!
 
     #[test]
     fn text_sort_stable() {
