@@ -1,10 +1,13 @@
-use crate::SCALE;
+use std::hash::{Hash, Hasher};
+
 use rltk::RGB;
 use specs::prelude::*;
 use specs_derive::Component;
-use std::hash::{Hash, Hasher};
 
-#[derive(Component, Clone, Debug)]
+use crate::SCALE;
+
+// NOTE: For small components like these, I usually just make them Copy.
+#[derive(Component, Clone, Copy, Debug)]
 pub struct Velocity {
     pub x: f64,
     pub y: f64,
@@ -19,7 +22,7 @@ impl Velocity {
     }
 }
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct Position {
     pub x: f64,
     pub y: f64,
@@ -32,6 +35,8 @@ impl Position {
 
     pub fn distance(&self, pos_a: &Position, pos_b: &Position) -> std::cmp::Ordering {
 
+        // NOTE: Since you're just checking for ordering, you don't have to take the square
+        // root! It's a common optimization in games :)
         let res_a = ((pos_a.x - self.x).powi(2) + (pos_a.y - self.y).powi(2)).sqrt();
         let res_b = ((pos_b.x - self.x).powi(2) + (pos_b.y - self.y).powi(2)).sqrt();
 
@@ -44,6 +49,8 @@ impl Position {
     }
 }
 
+// NOTE: You can let the Rust compiler generate these implementations for you! Just add PartialEq,
+// Eq, and Hash to the Position struct derive attribute.
 impl PartialEq for Position {
     fn eq(&self, other: &Self) -> bool {
         self.x == other.x && self.y == other.y
@@ -65,6 +72,8 @@ pub struct Renderable {
     pub bg: RGB,
 }
 
+// NOTE: For empty components that are used as markers like this, you can declare them as
+// struct Boid; And use it as just Boid (or Self), with no braces. The type is the value!
 #[derive(Component, Copy, Clone, Debug)]
 pub struct Boid {}
 

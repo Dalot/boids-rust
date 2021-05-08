@@ -1,12 +1,17 @@
-extern crate rltk;
+// NOTE: This is how I usually structure my use statements, but I'm not sure if there's a standard
+// way or not.
+use std::time::Instant;
+
 use rand::Rng;
 use rltk::{GameState, Rltk, RGB};
 use specs::prelude::*;
 use systems::{BoidSystem, MovementSys};
+
 mod components;
 use components::*;
 mod systems;
 
+// NOTE: Sometimes I put crate-wide constants like these in src/constants.rs or src/config.rs
 const WIDTH: f64 = 150.0;
 const HEIGHT: f64 = 100.0;
 const SCALE: f64 = 1.3;
@@ -20,6 +25,7 @@ pub struct DeltaTime(f32);
 
 struct State {
     ecs: World,
+    previous_instant: Instant,
 }
 impl State {
     fn run_systems(&mut self, ctx: &mut Rltk) {
@@ -33,17 +39,16 @@ impl State {
 
 impl GameState for State {
     fn tick(&mut self, ctx: &mut Rltk) {
+        // NOTE: This is usually how I do delta time in games.
+        let now = Instant::now();
+        {
+            let mut delta = self.ecs.write_resource::<DeltaTime>();
+            delta.0 = (now - self.previous_instant).as_secs_f32();
+        }
+        self.previous_instant = now;
+
         ctx.cls();
         self.run_systems(ctx);
-        let now = std::time::Instant::now();
-        {
-            let mut delta = self.ecs.write_resource::<DeltaTime>();
-            *delta = DeltaTime(0.0);
-        }
-        {
-            let mut delta = self.ecs.write_resource::<DeltaTime>();
-            *delta = DeltaTime(now.elapsed().as_micros() as f32 / 1000000.0 + delta.0);
-        }
     }
 }
 
@@ -52,7 +57,10 @@ fn main() -> rltk::BError {
     let context = RltkBuilder::simple(WIDTH as u32, HEIGHT as u32)?
         .with_title("Boids Simulation")
         .build()?;
-    let mut gs = State { ecs: World::new() };
+    let mut gs = State {
+        ecs: World::new(),
+        previous_instant: Instant::now(),
+    };
     gs.ecs.register::<Position>();
     gs.ecs.register::<Renderable>();
     gs.ecs.register::<Velocity>();
